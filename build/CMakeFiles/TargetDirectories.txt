@@ -1,3 +1,0 @@
-/home/arthur/projects/minimax/build/CMakeFiles/minimax.dir
-/home/arthur/projects/minimax/build/CMakeFiles/edit_cache.dir
-/home/arthur/projects/minimax/build/CMakeFiles/rebuild_cache.dir
