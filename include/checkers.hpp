@@ -8,8 +8,8 @@
 struct boardState {
     union {
         struct {
-            uint64_t whitePawns;
             uint64_t blackPawns;
+            uint64_t whitePawns;
         };
         uint64_t pawns[2];
     };
@@ -30,6 +30,7 @@ struct moves {
     uint64_t downRightBitmap;
 };
 
+void printBitmap(uint64_t bitmap);
 void printBoard(const boardState& board);
 moves getCaptureMoves(const boardState& board);
 moves getNormalMoves(const boardState& board);
