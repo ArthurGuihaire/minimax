@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/arthur/projects/minimax/build",
+  "command": "/usr/bin/c++  -I/home/arthur/projects/minimax/include -O3 -DNDEBUG -o CMakeFiles/minimax.dir/src/checkers.cpp.o -c /home/arthur/projects/minimax/src/checkers.cpp",
+  "file": "/home/arthur/projects/minimax/src/checkers.cpp",
+  "output": "CMakeFiles/minimax.dir/src/checkers.cpp.o"
+}
+]
