@@ -37,6 +37,12 @@ void printBoard(const boardState& board) {
     std::cout << std::endl;
 }
 
+//Must be called BEFORE making a move
+bool checkWin(const boardState& board) {
+    const uint64_t lastPlayerPawns = board.pawns[!board.isWhite];
+    return __builtin_popcountll(lastPlayerPawns) == 0;
+}
+
 //Bitmaps for board manipulation
 constexpr static uint64_t maskLeft2 = 0x3F3F3F3F3F3F3F3F;
 constexpr static uint64_t maskLeft1 = 0x7F7F7F7F7F7F7F7F;
@@ -94,22 +100,27 @@ moves getNormalMoves(const boardState& board) {
     }
 }
 
-moves getMoves(const boardState& board) {
+moves getMoves(boardState& board) {
     constexpr uint64_t zero[4] = {0, 0, 0, 0};
+    if (!board.isCaptureMove) board.isWhite = !board.isWhite;
     moves possibleMoves = getCaptureMoves(board);
-    if (!std::memcmp(&possibleMoves, zero, sizeof(moves))) // memcmp returns 0 if they're the same, so invert
+    if (!std::memcmp(&possibleMoves, zero, sizeof(moves))) { // memcmp returns 0 if they're the same, so invert
+        board.isCaptureMove = false;
         possibleMoves = getNormalMoves(board);
+    }
+    else board.isCaptureMove = true;
     return possibleMoves;
 }
 
-void copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
+//returns number of moves
+std::pair<boardState*, uint32_t> copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
     constexpr static uint64_t one64Bits = 0x1; // 0x1 is 32 bits by default, we need 64 bits
-    static boardState boardCopies[48];
+    static boardState boardCopies[48]; //NOT thread-safe!
     
-    printBitmap(moveBitmaps.downLeftBitmap);
-    printBitmap(moveBitmaps.downRightBitmap);
-    printBitmap(moveBitmaps.upLeftBitmap);
-    printBitmap(moveBitmaps.upRightBitmap);
+    //printBitmap(moveBitmaps.downLeftBitmap);
+    //printBitmap(moveBitmaps.downRightBitmap);
+    //printBitmap(moveBitmaps.upLeftBitmap);
+    //printBitmap(moveBitmaps.upRightBitmap);
 
     uint32_t copyIndex;
     uint32_t numMoves = __builtin_popcountll(moveBitmaps.upLeftBitmap);
@@ -117,7 +128,7 @@ void copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
     for (copyIndex = 0; copyIndex < numMoves; copyIndex++) {
         uint32_t index = __builtin_ctzl(remainingMoves);
         uint64_t srcBitmap = ~(one64Bits << index);
-        uint64_t destBitmap = one64Bits << (index + 9);
+        uint64_t destBitmap = one64Bits << (index + (9 << board.isCaptureMove)); // if is capture move, double the bitshift
         std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves)); // Possible optimization: Copy only 17 bytes not 24
         boardCopies[copyIndex].pawns[board.isWhite] &= srcBitmap;
         boardCopies[copyIndex].pawns[board.isWhite] |= destBitmap;
@@ -130,12 +141,13 @@ void copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
     for (; copyIndex < stopIndex; copyIndex++) {
         uint32_t index = __builtin_ctzl(remainingMoves);
         uint64_t srcBitmap = ~(one64Bits << index);
-        uint64_t destBitmap = one64Bits << (index + 7);
-        std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves)); // Possible optimization: Copy only 17 bytes not 24
+        uint64_t destBitmap = one64Bits << (index + (7 << board.isCaptureMove));
+
+        std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves));
         boardCopies[copyIndex].pawns[board.isWhite] &= srcBitmap;
         boardCopies[copyIndex].pawns[board.isWhite] |= destBitmap;
-        //delete the move from available moves
-        remainingMoves &= srcBitmap;    
+
+        remainingMoves &= srcBitmap;
     }
     numMoves = __builtin_popcountll(moveBitmaps.downLeftBitmap);
     stopIndex = numMoves + copyIndex;
@@ -143,11 +155,12 @@ void copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
     for (; copyIndex < stopIndex; copyIndex++) {
         uint32_t index = __builtin_ctzl(remainingMoves);
         uint64_t srcBitmap = ~(one64Bits << index);
-        uint64_t destBitmap = one64Bits << (index - 7);
-        std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves)); // Possible optimization: Copy only 17 bytes not 24
+        uint64_t destBitmap = one64Bits << (index - (7 << board.isCaptureMove));
+
+        std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves));
         boardCopies[copyIndex].pawns[board.isWhite] &= srcBitmap;
         boardCopies[copyIndex].pawns[board.isWhite] |= destBitmap;
-        //delete the move from available moves
+
         remainingMoves &= srcBitmap;    
     }
     numMoves = __builtin_popcountll(moveBitmaps.downRightBitmap);
@@ -156,17 +169,16 @@ void copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
     for (; copyIndex < stopIndex; copyIndex++) {
         uint32_t index = __builtin_ctzl(remainingMoves);
         uint64_t srcBitmap = ~(one64Bits << index);
-        uint64_t destBitmap = one64Bits << (index - 9);
-        std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves)); // Possible optimization: Copy only 17 bytes not 24
+        uint64_t destBitmap = one64Bits << (index - (9 << board.isCaptureMove));
+
+        std::memcpy(&(boardCopies[copyIndex]), &board, sizeof(moves));
         boardCopies[copyIndex].pawns[board.isWhite] &= srcBitmap;
         boardCopies[copyIndex].pawns[board.isWhite] |= destBitmap;
-        //delete the move from available moves
+
         remainingMoves &= srcBitmap;    
     }
     
-    for (uint32_t i = 0; i < copyIndex; i++) { 
-        printBoard(boardCopies[i]);
-    }
+    return {&boardCopies[0], stopIndex};
 }
 
 void doMove(const uint64_t srcMask, const uint64_t destMask, boardState& board) {
@@ -178,4 +190,63 @@ void doMove(const uint64_t srcMask, const uint64_t destMask, boardState& board) 
         board.blackPawns &= (~srcMask);
         board.blackPawns |= destMask;
     }
+}
+
+void userChooseMove(boardState& board) {
+    moves validMoves = getMoves(board);
+choose_coords_label:
+    int32_t xSrc, ySrc, xDest, yDest;
+    do {
+        std::cout << "x coord src: " << std::flush;
+        std::cin >> xSrc;
+
+        std::cout << "y coord src: " << std::flush;
+        std::cin >> ySrc;
+    } while ((board.pawns[board.isWhite] >> (63 - 8 * ySrc - xSrc) & 0x1) != 1 || !(0 <= xSrc && xSrc < 8 && 0 <= ySrc && ySrc < 8));
+
+    do {
+        std::cout << "x coord dest: " << std::flush;
+        std::cin >> xDest;
+
+        std::cout << "y coord dest: " << std::flush;
+        std::cin >> yDest;
+    } while ((((board.blackPawns | board.whitePawns) >> (63 - 8 * yDest - xDest)) & 0x1) != 0 || !(0 <= xDest && xDest < 8 && 0 <= yDest && yDest < 8));
+
+    const uint32_t moveDistance = board.isCaptureMove ? 2 : 1;
+    if (std::abs(xSrc - xDest) != moveDistance) goto choose_coords_label;
+    if (std::abs(ySrc - yDest) != moveDistance) goto choose_coords_label;
+    
+    uint64_t srcBitmap = ~(0x1 << (63 - 8 * ySrc - xSrc));
+    uint64_t destBitmap;
+
+    if (xDest < xSrc && yDest < ySrc) {
+        if ((validMoves.upLeftBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+            goto choose_coords_label;
+        else
+            destBitmap = (~srcBitmap) << 9;
+    }
+    else if (xDest > xSrc && yDest < ySrc) {
+        if ((validMoves.upRightBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+            goto choose_coords_label;
+        else
+            destBitmap = (~srcBitmap) << 7;
+    }
+    else if (xDest < xSrc && yDest > ySrc) {
+        if ((validMoves.downLeftBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+            goto choose_coords_label;
+        else
+            destBitmap = (~srcBitmap) >> 7;
+    }
+    else if (xDest > xSrc && yDest > ySrc) {
+        if ((validMoves.downRightBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+            goto choose_coords_label;
+        else
+            destBitmap = (~srcBitmap >> 9);
+    }
+    else {
+        std::cout << "Something went wrong" << std::endl;
+    }
+    
+    //if the program gets this far, the user has finally chosen a vliad move
+    doMove(srcBitmap, destBitmap, board);
 }

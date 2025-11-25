@@ -1,3 +1,5 @@
 #include <checkers.hpp>
 
-uint32_t minimax(boardState& board);
+int32_t getScore(const boardState& board);
+int32_t minimax(boardState& board);
+void runMinimax(boardState &board);
