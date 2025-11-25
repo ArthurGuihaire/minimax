@@ -38,7 +38,7 @@ void printBoard(const boardState& board) {
 }
 
 //Must be called BEFORE making a move
-bool checkWin(const boardState& board) {
+inline bool checkWin(const boardState& board) {
     const uint64_t lastPlayerPawns = board.pawns[!board.isWhite];
     return __builtin_popcountll(lastPlayerPawns) == 0;
 }
@@ -112,9 +112,11 @@ moves getMoves(boardState& board) {
     return possibleMoves;
 }
 
+//used in copyBoardWithMoves and userChooseMove
+constexpr inline static uint64_t one64Bits = 0x1; // 0x1 is 32 bits by default, we need 64 bits
+
 //returns number of moves
 std::pair<boardState*, uint32_t> copyBoardWithMoves(const boardState& board, const moves& moveBitmaps) {
-    constexpr static uint64_t one64Bits = 0x1; // 0x1 is 32 bits by default, we need 64 bits
     static boardState boardCopies[48]; //NOT thread-safe!
     
     //printBitmap(moveBitmaps.downLeftBitmap);
@@ -181,15 +183,18 @@ std::pair<boardState*, uint32_t> copyBoardWithMoves(const boardState& board, con
     return {&boardCopies[0], stopIndex};
 }
 
-void doMove(const uint64_t srcMask, const uint64_t destMask, boardState& board) {
-    if (board.isWhite) {
-        board.whitePawns &= (~srcMask);
-        board.whitePawns |= destMask;
-    }
-    else {
-        board.blackPawns &= (~srcMask);
-        board.blackPawns |= destMask;
-    }
+inline void doMoveLeft(boardState& board, uint64_t srcMask, uint32_t rawBitOffset, bool isCaptureMove) {
+    srcMask |= isCaptureMove << rawBitOffset; // adds a 1 to remove opponent pawn if its a capture move
+    board.pawns[board.isWhite] &= (~srcMask); // invert the src mask, to cancel out bits
+    const uint64_t destMask = srcMask << (rawBitOffset << isCaptureMove); //double raw bit offset if capture, since capturing moves 2 squares
+    board.pawns[board.isWhite] |= destMask; //apply the mask for the new moved pawn position
+}
+
+inline void doMoveRight(boardState& board, uint64_t srcMask, uint32_t rawBitOffset, bool isCaptureMove) {
+    srcMask |= isCaptureMove >> rawBitOffset; // adds a 1 to remove opponent pawn if its a capture move
+    board.pawns[board.isWhite] &= (~srcMask); // invert the src mask, to cancel out bits
+    const uint64_t destMask = srcMask >> (rawBitOffset << isCaptureMove); //double raw bit offset if capture, since capturing moves 2 squares
+    board.pawns[board.isWhite] |= destMask; //apply the mask for the new moved pawn position
 }
 
 void userChooseMove(boardState& board) {
@@ -202,7 +207,7 @@ choose_coords_label:
 
         std::cout << "y coord src: " << std::flush;
         std::cin >> ySrc;
-    } while ((board.pawns[board.isWhite] >> (63 - 8 * ySrc - xSrc) & 0x1) != 1 || !(0 <= xSrc && xSrc < 8 && 0 <= ySrc && ySrc < 8));
+    } while ((board.pawns[board.isWhite] >> (63 - 8 * ySrc - xSrc) & one64Bits) != 1 || !(0 <= xSrc && xSrc < 8 && 0 <= ySrc && ySrc < 8));
 
     do {
         std::cout << "x coord dest: " << std::flush;
@@ -210,43 +215,43 @@ choose_coords_label:
 
         std::cout << "y coord dest: " << std::flush;
         std::cin >> yDest;
-    } while ((((board.blackPawns | board.whitePawns) >> (63 - 8 * yDest - xDest)) & 0x1) != 0 || !(0 <= xDest && xDest < 8 && 0 <= yDest && yDest < 8));
+    } while ((((board.blackPawns | board.whitePawns) >> (63 - 8 * yDest - xDest)) & one64Bits) != 0 || !(0 <= xDest && xDest < 8 && 0 <= yDest && yDest < 8));
 
     const uint32_t moveDistance = board.isCaptureMove ? 2 : 1;
     if (std::abs(xSrc - xDest) != moveDistance) goto choose_coords_label;
     if (std::abs(ySrc - yDest) != moveDistance) goto choose_coords_label;
     
-    uint64_t srcBitmap = ~(0x1 << (63 - 8 * ySrc - xSrc));
+    uint64_t srcBitmap = one64Bits << (63 - 8 * ySrc - xSrc); // srcBitmap is inverted in doMove
     uint64_t destBitmap;
 
     if (xDest < xSrc && yDest < ySrc) {
-        if ((validMoves.upLeftBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+        if ((validMoves.upLeftBitmap >> (63 - 8 * ySrc - xSrc) & one64Bits) == 0)
             goto choose_coords_label;
         else
-            destBitmap = (~srcBitmap) << 9;
+            destBitmap = srcBitmap << 9;
     }
     else if (xDest > xSrc && yDest < ySrc) {
-        if ((validMoves.upRightBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+        if ((validMoves.upRightBitmap >> (63 - 8 * ySrc - xSrc) & one64Bits) == 0)
             goto choose_coords_label;
         else
-            destBitmap = (~srcBitmap) << 7;
+            destBitmap = srcBitmap << 7;
     }
     else if (xDest < xSrc && yDest > ySrc) {
-        if ((validMoves.downLeftBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+        if ((validMoves.downLeftBitmap >> (63 - 8 * ySrc - xSrc) & one64Bits) == 0)
             goto choose_coords_label;
         else
-            destBitmap = (~srcBitmap) >> 7;
+            destBitmap = srcBitmap >> 7;
     }
     else if (xDest > xSrc && yDest > ySrc) {
-        if ((validMoves.downRightBitmap >> (63 - 8 * ySrc - xSrc) & 0x1) == 0)
+        if ((validMoves.downRightBitmap >> (63 - 8 * ySrc - xSrc) & one64Bits) == 0)
             goto choose_coords_label;
         else
-            destBitmap = (~srcBitmap >> 9);
+            destBitmap = srcBitmap >> 9;
     }
     else {
         std::cout << "Something went wrong" << std::endl;
     }
     
-    //if the program gets this far, the user has finally chosen a vliad move
-    doMove(srcBitmap, destBitmap, board);
+    //if the program gets this far, the user has finally chosen a valid move
+    
 }

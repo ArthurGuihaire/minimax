@@ -30,4 +30,4 @@ moves getMoves(boardState& board);
 std::pair<boardState*, uint32_t> copyBoardWithMoves(const boardState& board, const moves& moveBitmaps);
 
 void userChooseMove(boardState& board);
-void doMove(const uint64_t srcMask, const uint64_t destMask, boardState& board);
+//void doMove(boardState& board, const uint64_t srcMask, const uint64_t destMask);
