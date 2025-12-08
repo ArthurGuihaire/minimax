@@ -1,7 +1,7 @@
-#include <gpuBuffer.hpp>
 #include <GL/glew.h>
-#include <constants.hpp>
+#include <gpuBuffer.hpp>
 #include <utils.hpp>
+#include <constants.hpp>
 
 gpuBuffer::gpuBuffer(const void* data, const unsigned int sizeBytes, const unsigned int bufferType)
  : m_bufferSize(bufferType), m_usedMemory(sizeBytes), m_bufferType(bufferType)

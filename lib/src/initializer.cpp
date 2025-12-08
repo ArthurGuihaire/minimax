@@ -41,10 +41,9 @@ GLFWwindow* createWindow(bool fullscreen) {
     return window;
 }
 
-void initOpenGL(GLFWwindow* window) {
-    glewExperimental = GL_TRUE;
-    int result = glewInit();
-    if (result != GLEW_OK) {
+void initGLAD() {
+    int err = glewInit();
+    if (err != GLEW_OK) {
         std::cerr << "Error initializing GLEW" << std::endl;
         exit(1);
     }
