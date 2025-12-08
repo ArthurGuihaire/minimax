@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <utility>
 
 struct boardState {
     union {
@@ -12,6 +11,7 @@ struct boardState {
     };
     bool isWhite;
     bool isCaptureMove;
+    uint32_t srcPosition;
 };
 
 struct moves {
@@ -27,7 +27,7 @@ bool checkWin(const boardState& board);
 moves getCaptureMoves(const boardState& board);
 moves getNormalMoves(const boardState& board);
 moves getMoves(boardState& board);
-std::pair<boardState*, uint32_t> copyBoardWithMoves(const boardState& board, const moves& moveBitmaps);
+uint32_t copyBoardWithMoves(const boardState& board, const moves& moveBitmaps, boardState* writeBoardArray);
 
 void userChooseMove(boardState& board);
 //void doMove(boardState& board, const uint64_t srcMask, const uint64_t destMask);

@@ -12,33 +12,22 @@ Application::Application(const uint32_t numPlayers) :
 }
 
 void printPlayerTurn(bool isWhite) {
-    if (isWhite) std::cout << "Black to move" << std::endl;
-    else std::cout << "White to move" << std::endl;
+    if (isWhite) std::cout << "White to move" << std::endl;
+    else std::cout << "Black to move" << std::endl;
 }
 
 void Application::runGame() {
     bool running = true;
     printBoard(board);
-    printPlayerTurn(board.isWhite);
     while (running) {
-        //first player move
-        if (numPlayers == 0) {
+        printPlayerTurn(board.isWhite);
+        if (numPlayers == 0 || (numPlayers == 1 && board.isWhite)) {
             runMinimax(board);
+            std::cin.get();
         }
         else {
             userChooseMove(board);
         }
         printBoard(board);
-        printPlayerTurn(board.isWhite);
-        
-        //second player move
-        if (numPlayers == 2) {
-            userChooseMove(board);
-        }
-        else {
-            runMinimax(board);
-        }
-        printBoard(board);
-        printPlayerTurn(board.isWhite);
     }
 }

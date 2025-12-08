@@ -1,6 +1,6 @@
 #include <application.hpp>
 
 int main() {
-    Application checkers(2);
+    Application checkers(1);
     checkers.runGame();
 }
