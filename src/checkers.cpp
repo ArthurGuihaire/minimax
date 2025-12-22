@@ -1,6 +1,7 @@
 #include <checkers.hpp>
 #include <iostream>
 #include <cstring> // memcpy and memcmp
+#include <constants.hpp>
 
 void printBitmap(uint64_t bitmap) {
     uint64_t extractBit = 0x8000000000000000;
@@ -52,7 +53,7 @@ constexpr static uint64_t maskRight1 = 0xFEFEFEFEFEFEFEFE;
 // 0x1 is 32 bits by default, we need 64 bits
 constexpr inline static uint64_t one64Bits = 0x1; 
 
-moves getCaptureMoves(const boardState& board) {
+static moves getCaptureMoves(const boardState& board) {
     const uint64_t emptySquares = ~(board.blackPawns | board.whitePawns);
     //upleft capture move
     uint64_t emptyShifted = emptySquares >> 18 & maskLeft2; // mask left 2 columns
@@ -77,7 +78,7 @@ moves getCaptureMoves(const boardState& board) {
     return {upLeftCaptures, upRightCaptures, downLeftCaptures, downRightCaptures};
 }
 
-moves getNormalMoves(const boardState& board) {
+static moves getNormalMoves(const boardState& board) {
     const uint64_t emptySquares = ~(board.blackPawns | board.whitePawns);
     if (board.isWhite) {
         //move left
@@ -144,7 +145,6 @@ moves getMoves(boardState& board) {
     //    board.isCaptureMove = true;
     //}
     //return possibleMoves;
-    constexpr static uint64_t zero[4] = {0, 0, 0, 0};
     if (!board.isCaptureMove) board.isWhite = !board.isWhite;
     moves possibleMoves;
     if (board.isCaptureMove) {

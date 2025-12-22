@@ -16,6 +16,7 @@ class gpuBuffer {
         void uploadBuffer(const void* data, const unsigned int sizeBytes);
         void bind() const;
         void unbind() const;
+        void clear();
     private:
         unsigned int m_RendererID;
         unsigned int m_bufferSize;

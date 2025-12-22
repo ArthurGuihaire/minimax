@@ -24,8 +24,8 @@ struct moves {
 void printBitmap(uint64_t bitmap);
 void printBoard(const boardState& board);
 bool checkWin(const boardState& board);
-moves getCaptureMoves(const boardState& board);
-moves getNormalMoves(const boardState& board);
+//moves getCaptureMoves(const boardState& board);
+//moves getNormalMoves(const boardState& board);
 moves getMoves(boardState& board);
 uint32_t copyBoardWithMoves(const boardState& board, const moves& moveBitmaps, boardState* writeBoardArray);
 

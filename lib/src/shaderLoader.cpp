@@ -1,8 +1,7 @@
 #include <GL/glew.h>
 #include <shaderLoader.hpp>
-#include <fstream>
-#include <filesystem>
 #include <iostream>
+#include <fstream>
 
 uint32_t compileShader(uint32_t type, const char* shaderSource) {
     uint32_t id = glCreateShader(type);

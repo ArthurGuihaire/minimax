@@ -84,3 +84,7 @@ void gpuBuffer::bind() const {
 void gpuBuffer::unbind()const {
     glBindBuffer(m_bufferType, 0);
 }
+
+void gpuBuffer::clear() {
+    m_usedMemory = 0;
+}
